@@ -203,23 +203,27 @@ func haveSig(data, sig []byte) bool {
 
 func findModuleInfo(v *Version, f exe) error {
 	const maxModInfo = 128 << 10
-	start, end := f.RODataRange()
-	for addr := start; addr < end; {
-		size := uint64(4 << 20)
-		if end-addr < size {
-			size = end - addr
+	ro := f.RODataRange()
+	for _, addrs := range ro {
+		start := addrs[0]
+		end := addrs[1]
+		for addr := start; addr < end; {
+			size := uint64(4 << 20)
+			if end-addr < size {
+				size = end - addr
+			}
+			data, err := f.ReadData(addr, size)
+			if err != nil {
+				return fmt.Errorf("reading text: %v", err)
+			}
+			if haveModuleInfo(data, v) {
+				return nil
+			}
+			if addr+size < end {
+				size -= maxModInfo
+			}
+			addr += size
 		}
-		data, err := f.ReadData(addr, size)
-		if err != nil {
-			return fmt.Errorf("reading text: %v", err)
-		}
-		if haveModuleInfo(data, v) {
-			return nil
-		}
-		if addr+size < end {
-			size -= maxModInfo
-		}
-		addr += size
 	}
 	return nil
 }

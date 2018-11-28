@@ -30,7 +30,7 @@ type exe interface {
 	ByteOrder() binary.ByteOrder
 	Entry() uint64
 	TextRange() (uint64, uint64)
-	RODataRange() (uint64, uint64)
+	RODataRange() [][2]uint64
 }
 
 func openExe(file string) (exe, error) {
@@ -128,18 +128,19 @@ func (x *elfExe) TextRange() (uint64, uint64) {
 	return 0, 0
 }
 
-func (x *elfExe) RODataRange() (uint64, uint64) {
+func (x *elfExe) RODataRange() [][2]uint64 {
+	var r [][2]uint64
 	for _, p := range x.f.Progs {
 		if p.Type == elf.PT_LOAD && p.Flags&(elf.PF_R|elf.PF_W|elf.PF_X) == elf.PF_R {
-			return p.Vaddr, p.Vaddr + p.Filesz
+			r = append(r, [2]uint64{p.Vaddr, p.Vaddr + p.Filesz})
 		}
 	}
 	for _, p := range x.f.Progs {
 		if p.Type == elf.PT_LOAD && p.Flags&(elf.PF_R|elf.PF_W|elf.PF_X) == (elf.PF_R|elf.PF_X) {
-			return p.Vaddr, p.Vaddr + p.Filesz
+			r = append(r, [2]uint64{p.Vaddr, p.Vaddr + p.Filesz})
 		}
 	}
-	return 0, 0
+	return r
 }
 
 type peExe struct {
@@ -226,8 +227,9 @@ func (x *peExe) TextRange() (uint64, uint64) {
 	return 0, 0
 }
 
-func (x *peExe) RODataRange() (uint64, uint64) {
-	return x.TextRange()
+func (x *peExe) RODataRange() [][2]uint64 {
+	a, b := x.TextRange()
+	return [][2]uint64{[2]uint64{a, b}}
 }
 
 type machoExe struct {
@@ -312,6 +314,7 @@ func (x *machoExe) TextRange() (uint64, uint64) {
 	return 0, 0
 }
 
-func (x *machoExe) RODataRange() (uint64, uint64) {
-	return x.TextRange()
+func (x *machoExe) RODataRange() [][2]uint64 {
+	a, b := x.TextRange()
+	return [][2]uint64{[2]uint64{a, b}}
 }
