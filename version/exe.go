@@ -228,8 +228,12 @@ func (x *peExe) TextRange() (uint64, uint64) {
 }
 
 func (x *peExe) RODataRange() [][2]uint64 {
-	a, b := x.TextRange()
-	return [][2]uint64{[2]uint64{a, b}}
+	for _, sect := range x.f.Sections {
+		if sect.Name == ".rdata" {
+			return [][2]uint64{[2]uint64{uint64(sect.VirtualAddress) + x.imageBase(), uint64(sect.VirtualAddress+sect.Size) + x.imageBase()}}
+		}
+	}
+	return [][2]uint64{[2]uint64{0, 0}}
 }
 
 type machoExe struct {
